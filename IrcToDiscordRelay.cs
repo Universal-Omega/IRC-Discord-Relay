@@ -205,7 +205,7 @@ namespace IrcToDiscordRelay
         private void IrcClient_OnChannelMessage(object sender, IrcEventArgs e)
         {
             // Ignore messages from the bot itself and ignored users
-            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.From))
+            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
             {
                 return;
             }
