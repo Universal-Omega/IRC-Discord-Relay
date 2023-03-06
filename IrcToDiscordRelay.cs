@@ -7,11 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace IrcToDiscordRelay
 {
-    public class IrcToDiscordRelay
+    internal class IrcToDiscordRelay
     {
         private readonly string ircServer;
         private readonly int ircPort;
@@ -25,6 +24,9 @@ namespace IrcToDiscordRelay
         private readonly Dictionary<ulong, string> discordToIrcChannelMap;
         private readonly Dictionary<string, ulong> ircToDiscordChannelMap;
         private readonly Dictionary<string, IMessageChannel> discordChannelsMap;
+
+        private HashSet<string> ircIgnoredUsers = new();
+        private HashSet<string> discordIgnoredUsers = new();
 
         private readonly IrcClient ircClient;
         private readonly DiscordSocketClient discordClient;
@@ -46,10 +48,10 @@ namespace IrcToDiscordRelay
             discordToIrcChannelMap = new Dictionary<ulong, string>();
             ircToDiscordChannelMap = new Dictionary<string, ulong>();
 
-            SectionData discordChannelMappingSection = data.Sections.GetSectionData("DiscordChannelMapping");
-            if (discordChannelMappingSection != null)
+            SectionData channelMappingSection = data.Sections.GetSectionData("ChannelMapping");
+            if (channelMappingSection != null)
             {
-                foreach (KeyData key in discordChannelMappingSection.Keys)
+                foreach (KeyData key in channelMappingSection.Keys)
                 {
                     ulong discordChannelId = ulong.Parse(key.KeyName);
                     string ircChannel = key.Value;
@@ -59,6 +61,8 @@ namespace IrcToDiscordRelay
             }
 
             discordChannelsMap = new Dictionary<string, IMessageChannel>();
+
+            ParseIgnoreUsers(data);
 
 
             // Create the IRC client and register event handlers
@@ -92,12 +96,12 @@ namespace IrcToDiscordRelay
             IniData data = parser.ReadFile("config.ini");
 
             // Join all the IRC channels specified in the configuration file
-            SectionData ircChannelMappingSection = data.Sections.GetSectionData("IRCChannelMapping");
-            if (ircChannelMappingSection != null)
+            SectionData channelMappingSection = data.Sections.GetSectionData("ChannelMapping");
+            if (channelMappingSection != null)
             {
-                foreach (KeyData ircChannelKey in ircChannelMappingSection.Keys)
+                foreach (KeyData channelKey in channelMappingSection.Keys)
                 {
-                    ircClient.RfcJoin(ircChannelKey.KeyName);
+                    ircClient.RfcJoin(channelKey.Value);
                 }
             }
 
@@ -130,10 +134,28 @@ namespace IrcToDiscordRelay
             await discordClient.LogoutAsync();
         }
 
+        private void ParseIgnoreUsers(IniData data)
+        {
+            SectionData ignoreUsersSection = data.Sections.GetSectionData("IgnoreUsers");
+            if (ignoreUsersSection != null)
+            {
+                KeyData ircIgnoreUsers = ignoreUsersSection.Keys.FirstOrDefault(k => k.KeyName == "IRC");
+                if (ircIgnoreUsers != null)
+                {
+                    ircIgnoredUsers = new HashSet<string>(ircIgnoreUsers.Value.Split(','));
+                }
+                KeyData discordIgnoreUsers = ignoreUsersSection.Keys.FirstOrDefault(k => k.KeyName == "Discord");
+                if (discordIgnoreUsers != null)
+                {
+                    discordIgnoredUsers = new HashSet<string>(discordIgnoreUsers.Value.Split(','));
+                }
+            }
+        }
+
         private async Task DiscordClient_MessageReceived(SocketMessage message)
         {
-            // Ignore messages from the bot itself
-            if (message.Author.Id == discordClient.CurrentUser.Id)
+            // Ignore messages from the bot itself and ignored users
+            if (message.Author.Id == discordClient.CurrentUser.Id || discordIgnoredUsers.Contains(message.Author.Username))
             {
                 return;
             }
@@ -150,7 +172,7 @@ namespace IrcToDiscordRelay
         private async Task SendMessageToIrcChannel(string ircChannel, string message)
         {
             // Send the message to the IRC channel asynchronously
-            ircClient.SendMessage(SendType.Message, ircChannel, message);
+            await Task.Run(() => ircClient.SendMessage(SendType.Message, ircChannel, message));
         }
 
 
@@ -170,20 +192,20 @@ namespace IrcToDiscordRelay
             IniData data = parser.ReadFile("config.ini");
 
             // Join all the IRC channels specified in the configuration file
-            SectionData ircChannelMappingSection = data.Sections.GetSectionData("IRCChannelMapping");
-            if (ircChannelMappingSection != null)
+            SectionData channelMappingSection = data.Sections.GetSectionData("ChannelMapping");
+            if (channelMappingSection != null)
             {
-                foreach (KeyData ircChannelKey in ircChannelMappingSection.Keys)
+                foreach (KeyData channelKey in channelMappingSection.Keys)
                 {
-                    ircClient.RfcJoin(ircChannelKey.KeyName);
+                    ircClient.RfcJoin(channelKey.Value);
                 }
             }
         }
 
         private void IrcClient_OnChannelMessage(object sender, IrcEventArgs e)
         {
-            // Ignore messages from the bot itself
-            if (e.Data.Nick == ircNickname)
+            // Ignore messages from the bot itself and ignored users
+            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.From))
             {
                 return;
             }

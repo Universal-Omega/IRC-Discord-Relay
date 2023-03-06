@@ -5,7 +5,7 @@ namespace IrcToDiscordRelay
 {
     internal class Program
     {
-        private static async Task Main(string[] args)
+        private static async Task Main()
         {
             // Create a new instance of the IrcToDiscordRelay class
             IrcToDiscordRelay ircToDiscordRelay = new();
