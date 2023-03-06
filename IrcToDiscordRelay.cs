@@ -141,11 +141,8 @@ namespace IrcToDiscordRelay
             // Get the IRC channel for the Discord channel, if available
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
-                // Get the guild-specific nickname, if available
-                string nickname = (message.Author as SocketGuildUser)?.Nickname ?? message.Author.Username;
-
                 // Relay the Discord message to the IRC channel asynchronously
-                await SendMessageToIrcChannel(ircChannel, $"<{nickname}> {message.Content}");
+                await SendMessageToIrcChannel(ircChannel, $"<{message.Author.Username}#{message.Author.Discriminator> {message.Content}");
             }
         }
 
