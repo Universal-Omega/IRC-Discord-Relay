@@ -141,11 +141,8 @@ namespace IrcToDiscordRelay
             // Get the IRC channel for the Discord channel, if available
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
-                // Get the guild-specific nickname, if available
-                string nickname = (message.Author as SocketGuildUser)?.Nickname ?? message.Author.Username;
-
                 // Relay the Discord message to the IRC channel asynchronously
-                await SendMessageToIrcChannel(ircChannel, $"<{nickname}> {message.Content}");
+                await SendMessageToIrcChannel(ircChannel, $"<{message.Author.Username}#{message.Author.Discriminator}> {message.Content}");
             }
         }
 
@@ -206,14 +203,8 @@ namespace IrcToDiscordRelay
             Console.WriteLine($"IRC Error: {e.Data.Message}");
         }
 
-        private async Task SendMessageToDiscordChannel(string ircChannel, string message)
+        private async Task SendMessageToDiscordChannel(string discordChannelId, string message)
         {
-            // Check if there is a corresponding Discord channel for the IRC channel
-            if (!discordToIrcChannelMap.TryGetValue(ulong.Parse(ircChannel), out string discordChannelId))
-            {
-                return;
-            }
-
             // Get the Discord channel by ID
             if (!discordChannelsMap.TryGetValue(discordChannelId, out IMessageChannel messageChannel))
             {
