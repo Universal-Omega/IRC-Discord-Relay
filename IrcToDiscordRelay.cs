@@ -142,7 +142,7 @@ namespace IrcToDiscordRelay
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
                 // Relay the Discord message to the IRC channel asynchronously
-                await SendMessageToIrcChannel(ircChannel, $"<{message.Author.Username}#{message.Author.Discriminator> {message.Content}");
+                await SendMessageToIrcChannel(ircChannel, $"<{message.Author.Username}#{message.Author.Discriminator}> {message.Content}");
             }
         }
 
