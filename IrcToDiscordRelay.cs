@@ -82,7 +82,13 @@ namespace IrcToDiscordRelay
             ircClient.UseSsl = ircUseSSL;
 
             // Create the Discord client
-            discordClient = new DiscordSocketClient();
+            discordClient = new DiscordSocketClient(
+                new DiscordSocketConfig
+                {
+                    GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+                }
+            );
+
             discordClient.MessageReceived += DiscordClient_MessageReceived;
         }
 
