@@ -257,7 +257,7 @@ namespace IrcToDiscordRelay
             if (ircToDiscordChannelMap.TryGetValue(e.Data.Channel, out ulong discordChannelId))
             {
                 // Relay the IRC notice message to the Discord channel asynchronously
-                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> NOTICE: {e.Data.Message}");
+                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> NOTICE: {e.Data.Message.Replace("*", "\\*")}");
             }
         }
 
@@ -318,6 +318,5 @@ namespace IrcToDiscordRelay
 
             return message;
         }
-
     }
 }
