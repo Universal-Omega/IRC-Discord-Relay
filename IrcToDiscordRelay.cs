@@ -77,6 +77,7 @@ namespace IrcToDiscordRelay
             ircClient.OnConnected += IrcClient_OnConnected;
             ircClient.OnDisconnected += IrcClient_OnDisconnected;
             ircClient.OnChannelMessage += IrcClient_OnChannelMessage;
+            ircClient.OnChannelNotice += IrcClient_OnChannelNotice;
             ircClient.OnError += IrcClient_OnError;
 
             ircClient.UseSsl = ircUseSSL;
@@ -133,6 +134,7 @@ namespace IrcToDiscordRelay
             // Disconnect from the IRC server and stop listening for messages
             ircClient.Disconnect();
             ircClient.OnChannelMessage -= IrcClient_OnChannelMessage;
+            ircClient.OnChannelNotice -= IrcClient_OnChannelNotice;
             ircClient.OnError -= IrcClient_OnError;
 
             // Disconnect from the Discord bot
@@ -169,8 +171,27 @@ namespace IrcToDiscordRelay
             // Get the IRC channel for the Discord channel, if available
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
+                string messageContent = message.CleanContent;
+
+                // Remove Discriminator from mentioned users
+                foreach (SocketUser mention in message.MentionedUsers)
+                {
+                    messageContent = messageContent.Replace($"#{mention.Discriminator}", "");
+                }
+
+                if (message.Reference != null)
+                {
+                    // If it is a reply, send the replied-to message's content as part of the message
+                    IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
+                    messageContent = $"<{message.Author}, replying to {repliedToMessage.Author}> {messageContent}";
+                }
+                else
+                {
+                    messageContent = $"<{message.Author}> {messageContent}";
+                }
+
                 // Relay the Discord message to the IRC channel asynchronously
-                await SendMessageToIrcChannel(ircChannel, $"<{message.Author.Username}#{message.Author.Discriminator}> {message.Content}");
+                await SendMessageToIrcChannel(ircChannel, messageContent);
             }
         }
 
@@ -224,6 +245,21 @@ namespace IrcToDiscordRelay
             }
         }
 
+        private void IrcClient_OnChannelNotice(object sender, IrcEventArgs e)
+        {
+            // Ignore messages from the bot itself and ignored users
+            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
+            {
+                return;
+            }
+
+            // Get the corresponding Discord channel for the IRC channel, if available
+            if (ircToDiscordChannelMap.TryGetValue(e.Data.Channel, out ulong discordChannelId))
+            {
+                // Relay the IRC notice message to the Discord channel asynchronously
+                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> NOTICE: {e.Data.Message}");
+            }
+        }
 
         private void IrcClient_OnError(object sender, ErrorEventArgs e)
         {
@@ -241,8 +277,47 @@ namespace IrcToDiscordRelay
                 discordChannelsMap[discordChannelId] = messageChannel;
             }
 
+            // Parse mentions
+            message = await ParseIrcMentions(message, messageChannel);
+
             // Send the message to the Discord channel asynchronously
             _ = await messageChannel.SendMessageAsync(message);
         }
+
+        private static async Task<string> ParseIrcMentions(string message, IMessageChannel channel)
+        {
+            _ = await Task.Run(() =>
+            {
+                List<string> mentions = message.Split(' ').Where(s => s.StartsWith('@') || s.EndsWith(':')).ToList();
+                if (!mentions.Any())
+                {
+                    return message;
+                }
+
+                // Get the current Discord server
+                IGuild guild = (channel as IGuildChannel)?.Guild;
+
+                // Parse mentions to Discord mentions
+                foreach (string mention in mentions)
+                {
+                    // Remove the @ or : characters from the mention
+                    string cleanedMention = mention.Trim('@', ':');
+
+                    // Try to find the user by username
+                    IGuildUser user = guild?.SearchUsersAsync(cleanedMention)?.Result?.FirstOrDefault(u => u.Username == cleanedMention);
+
+                    // Replace the mention with a Discord mention if found, or leave it as is otherwise
+                    if (user != null)
+                    {
+                        message = message.Replace(mention, $"<@{user.Id}>");
+                    }
+                }
+
+                return message;
+            });
+
+            return message;
+        }
+
     }
 }
