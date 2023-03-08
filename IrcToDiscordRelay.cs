@@ -119,11 +119,17 @@ namespace IrcToDiscordRelay
             // Map each Discord channel to its corresponding IMessageChannel object
             foreach (KeyValuePair<ulong, string> entry in discordToIrcChannelMap)
             {
-                ulong discordChannelId = entry.Key;
-                string ircChannel = entry.Value;
+                try
+                {
+                    ulong discordChannelId = entry.Key;
+                    string ircChannel = entry.Value;
 
-                IMessageChannel message = await discordClient.Rest.GetChannelAsync(discordChannelId) as IMessageChannel;
-                discordChannelsMap[ircChannel] = message;
+                    IMessageChannel message = await discordClient.Rest.GetChannelAsync(discordChannelId) as IMessageChannel;
+                    discordChannelsMap[ircChannel] = message;
+                } catch(Discord.Net.HttpException e) when (e.DiscordCode == DiscordErrorCode.MissingPermissions)
+                {
+                    // Ignore, bot does not have permissions to view the channel
+                }
             }
 
             ircClient.Listen();
