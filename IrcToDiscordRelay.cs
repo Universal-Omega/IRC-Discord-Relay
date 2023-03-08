@@ -128,7 +128,7 @@ namespace IrcToDiscordRelay
                     discordChannelsMap[ircChannel] = message;
                 } catch(Discord.Net.HttpException e) when (e.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
-                    // Ignore, bot does not have permissions to view the channel
+                    // Ignore, Bot does not have permissions to view the channel
                 }
             }
 
@@ -187,7 +187,7 @@ namespace IrcToDiscordRelay
 
                 if (message.Reference != null)
                 {
-                    // If it is a reply, send the replied-to message's content as part of the message
+                    // Note if it is a reply
                     IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
                     messageContent = $"<{message.Author}, replying to {repliedToMessage.Author}> {messageContent}";
                 }
