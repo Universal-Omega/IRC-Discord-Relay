@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Net.Rest;
 using Discord.WebSocket;
 using IniParser;
 using IniParser.Model;
@@ -6,6 +7,8 @@ using Meebey.SmartIrc4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace IrcToDiscordRelay
@@ -20,6 +23,7 @@ namespace IrcToDiscordRelay
         private readonly string ircPassword;
         private readonly bool ircUseSSL;
         private readonly string discordBotToken;
+        private readonly string discordProxy;
 
         private readonly Dictionary<ulong, string> discordToIrcChannelMap;
         private readonly Dictionary<string, ulong> ircToDiscordChannelMap;
@@ -44,6 +48,7 @@ namespace IrcToDiscordRelay
             ircPassword = data["IRC"]["Password"];
             ircUseSSL = bool.Parse(data["IRC"]["UseSSL"]);
             discordBotToken = data["Discord"]["BotToken"];
+            discordProxy = data["Discord"]["Proxy"];
 
             discordToIrcChannelMap = new Dictionary<ulong, string>();
             ircToDiscordChannelMap = new Dictionary<string, ulong>();
@@ -64,7 +69,6 @@ namespace IrcToDiscordRelay
 
             ParseIgnoreUsers(data);
 
-
             // Create the IRC client and register event handlers
             ircClient = new IrcClient
             {
@@ -82,11 +86,17 @@ namespace IrcToDiscordRelay
 
             ircClient.UseSsl = ircUseSSL;
 
+            if (discordProxy != null)
+            {
+                HttpClient.DefaultProxy = new WebProxy(discordProxy);
+            }
+
             // Create the Discord client
             discordClient = new DiscordSocketClient(
                 new DiscordSocketConfig
                 {
-                    GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+                    GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent,
+                    RestClientProvider = DefaultRestClientProvider.Create(useProxy: bool.Parse(discordProxy))
                 }
             );
 
@@ -126,7 +136,8 @@ namespace IrcToDiscordRelay
 
                     IMessageChannel message = await discordClient.Rest.GetChannelAsync(discordChannelId) as IMessageChannel;
                     discordChannelsMap[ircChannel] = message;
-                } catch(Discord.Net.HttpException e) when (e.DiscordCode == DiscordErrorCode.MissingPermissions)
+                }
+                catch (Discord.Net.HttpException e) when (e.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
                     // Ignore, Bot does not have permissions to view the channel
                 }
