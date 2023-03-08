@@ -96,7 +96,7 @@ namespace IrcToDiscordRelay
                 new DiscordSocketConfig
                 {
                     GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent,
-                    RestClientProvider = DefaultRestClientProvider.Create(useProxy: bool.Parse(discordProxy))
+                    RestClientProvider = DefaultRestClientProvider.Create(useProxy: discordProxy != null ? bool.Parse(discordProxy) : false)
                 }
             );
 
