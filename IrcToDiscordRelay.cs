@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Net.Rest;
+using Discord.Net.WebSockets;
 using Discord.WebSocket;
 using IniParser;
 using IniParser.Model;
@@ -96,7 +97,8 @@ namespace IrcToDiscordRelay
                 new DiscordSocketConfig
                 {
                     GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent,
-                    RestClientProvider = DefaultRestClientProvider.Create(useProxy: discordProxy != null)
+                    RestClientProvider = DefaultRestClientProvider.Create(useProxy: discordProxy != null),
+                    WebSocketProvider = DefaultWebSocketProvider.Create(discordProxy != null ? HttpClient.DefaultProxy : null)
                 }
             );
 
