@@ -82,7 +82,7 @@ namespace IrcToDiscordRelay
                 SendDelay = 300,
 
                 UseSsl = ircUseSSL
-        };
+            };
             ircClient.OnConnected += IrcClient_OnConnected;
             ircClient.OnDisconnected += IrcClient_OnDisconnected;
             ircClient.OnChannelMessage += IrcClient_OnChannelMessage;
