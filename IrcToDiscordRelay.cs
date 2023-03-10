@@ -143,7 +143,7 @@ namespace IrcToDiscordRelay
                 }
                 catch (Discord.Net.HttpException e) when (e.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
-                    // Ignore, Bot does not have permissions to view the channel
+                    // Ignore, bot does not have permissions to view the channel
                 }
             }
 
