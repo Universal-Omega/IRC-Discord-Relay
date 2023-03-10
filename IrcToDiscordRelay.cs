@@ -206,7 +206,20 @@ namespace IrcToDiscordRelay
                 if (message.Reference != null)
                 {
                     IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
-                    author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
+
+                    // If replying to the bot, return the actual user that the reply is for
+                    if (repliedToMessage.Author.Id == discordClient.CurrentUser.Id)
+                    {
+                        string[] parts = repliedToMessage.Content.Split(' ');
+                        if (parts.Length > 1 && parts[0].StartsWith("<") && parts[0].EndsWith(">"))
+                        {
+                            author = $"<{message.Author}, replying to {parts[0][1..^1]}>";
+                        }
+                    }
+                    else
+                    {
+                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
+                    }
                 }
 
                 await SendMessageToIrcChannel(ircChannel, messageContent, author);
