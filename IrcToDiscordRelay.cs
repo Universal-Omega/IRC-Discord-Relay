@@ -86,8 +86,8 @@ namespace IrcToDiscordRelay
             ircClient.OnConnected += IrcClient_OnConnected;
             ircClient.OnDisconnected += IrcClient_OnDisconnected;
             ircClient.OnChannelMessage += IrcClient_OnChannelMessage;
-            ircClient.OnChannelAction += IrcClient_OnChannelAction;
             ircClient.OnChannelNotice += IrcClient_OnChannelNotice;
+            ircClient.OnChannelAction += IrcClient_OnChannelAction;
             ircClient.OnError += IrcClient_OnError;
 
             if (discordProxy != null)
@@ -201,86 +201,70 @@ namespace IrcToDiscordRelay
                     messageContent = messageContent.Replace($"#{mention.Discriminator}", "");
                 }
 
+                // Determine if this message is a reply to another message
                 string author = $"<{message.Author}>";
-                int messageNumber = 1;
-                int totalMessages = 1;
-
-                if (message.Content.Length > MAX_MESSAGE_LENGTH)
+                if (message.Reference != null)
                 {
-                    // Split the message into multiple messages if it is too long
-                    string[] messages = SplitMessage(messageContent, MAX_MESSAGE_LENGTH);
-
-                    totalMessages = messages.Length;
-
-                    for (int i = 0; i < messages.Length; i++)
-                    {
-                        // Note which message it is
-                        messageNumber = i + 1;
-
-                        // Determine if this message is a reply to another message
-                        if (message.Reference != null)
-                        {
-                            IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
-                            author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
-                        }
-
-                        await SendMessageToIrcChannel(ircChannel, messages[i], author, messageNumber, totalMessages);
-                    }
+                    IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
+                    author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
                 }
-                else
+
+                await SendMessageToIrcChannel(ircChannel, messageContent, author);
+            }
+        }
+
+        private async Task SendMessageToIrcChannel(string ircChannel, string message, string author)
+        {
+            int maxMessageLength = MAX_MESSAGE_LENGTH - author.Length - 5;
+            string[] chunks = SplitMessage(message, maxMessageLength);
+
+            for (int i = 0; i < chunks.Length; i++)
+            {
+                string formattedLine = author;
+                int messageNumber = i + 1;
+                int totalMessages = chunks.Length;
+
+                if (chunks.Length > 1)
                 {
-                    // Determine if this message is a reply to another message
-                    if (message.Reference != null)
-                    {
-                        IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
-                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
-                    }
-
-                    await SendMessageToIrcChannel(ircChannel, messageContent, author, messageNumber, totalMessages);
+                    formattedLine += $" [{messageNumber}/{totalMessages}]";
                 }
+
+                formattedLine += $" {chunks[i]}";
+
+                await Task.Run(() => ircClient.SendMessage(SendType.Message, ircChannel, formattedLine));
             }
         }
 
         private static string[] SplitMessage(string message, int chunkSize)
         {
-            int messageLength = message.Length;
-            int numChunks = (int)Math.Ceiling((double)messageLength / chunkSize);
-            string[] chunks = new string[numChunks];
-
-            for (int i = 0; i < numChunks; i++)
+            if (message == null || chunkSize <= 0)
             {
-                int start = i * chunkSize;
-                int end = Math.Min(start + chunkSize, messageLength);
-                int length = end - start;
-                char[] buffer = new char[length];
-
-                message.CopyTo(start, buffer, 0, length);
-
-                chunks[i] = new string(buffer);
+                return new[] { message };
             }
 
-            return chunks;
-        }
+            List<string> parts = new();
 
-        private async Task SendMessageToIrcChannel(string ircChannel, string message, string author, int messageNumber, int totalMessages)
-        {
             string[] lines = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            totalMessages += lines.Length - 1;
-
-            for (int i = 0; i < lines.Length; i++)
+            foreach (string line in lines)
             {
-                string formattedLine = author;
-
-                if (totalMessages > 1)
+                if (line.Length <= chunkSize)
                 {
-                    formattedLine += $" [{messageNumber}/{totalMessages}]";
+                    parts.Add(line);
                 }
-
-                formattedLine += $" {lines[i]}";
-
-                await Task.Run(() => ircClient.SendMessage(SendType.Message, ircChannel, formattedLine));
-                messageNumber++;
+                else
+                {
+                    int startIndex = 0;
+                    while (startIndex < line.Length)
+                    {
+                        int length = Math.Min(chunkSize, line.Length - startIndex);
+                        string part = line.Substring(startIndex, length);
+                        parts.Add(part);
+                        startIndex += length;
+                    }
+                }
             }
+
+            return parts.ToArray();
         }
 
         private void IrcClient_OnConnected(object sender, EventArgs e)
