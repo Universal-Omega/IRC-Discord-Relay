@@ -86,6 +86,7 @@ namespace IrcToDiscordRelay
             ircClient.OnConnected += IrcClient_OnConnected;
             ircClient.OnDisconnected += IrcClient_OnDisconnected;
             ircClient.OnChannelMessage += IrcClient_OnChannelMessage;
+            ircClient.OnChannelAction += IrcClient_OnChannelAction;
             ircClient.OnChannelNotice += IrcClient_OnChannelNotice;
             ircClient.OnError += IrcClient_OnError;
 
@@ -320,7 +321,7 @@ namespace IrcToDiscordRelay
             if (ircToDiscordChannelMap.TryGetValue(e.Data.Channel, out ulong discordChannelId))
             {
                 // Relay the IRC message to the Discord channel asynchronously
-                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> {e.Data.Message}");
+                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> {ConvertToDiscord(e.Data.Message)}");
             }
         }
 
@@ -336,7 +337,26 @@ namespace IrcToDiscordRelay
             if (ircToDiscordChannelMap.TryGetValue(e.Data.Channel, out ulong discordChannelId))
             {
                 // Relay the IRC notice message to the Discord channel asynchronously
-                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> NOTICE: {e.Data.Message.Replace("*", "\\*")}");
+                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), $"<{e.Data.Nick}> NOTICE: {ConvertToDiscord(e.Data.Message.Replace("*", "\\*"))}");
+            }
+        }
+
+        private void IrcClient_OnChannelAction(object sender, ActionEventArgs e)
+        {
+            // Ignore messages from the bot itself and ignored users
+            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
+            {
+                return;
+            }
+
+            // Get the corresponding Discord channel for the IRC channel, if available
+            if (ircToDiscordChannelMap.TryGetValue(e.Data.Channel, out ulong discordChannelId))
+            {
+                // Format the action message as an italicized text with the sender's nickname
+                string formattedMessage = $"_**{e.Data.Nick}** {ConvertToDiscord(e.ActionMessage)}_";
+
+                // Relay the action message to the Discord channel asynchronously
+                _ = SendMessageToDiscordChannel(discordChannelId.ToString(), formattedMessage);
             }
         }
 
@@ -344,6 +364,65 @@ namespace IrcToDiscordRelay
         {
             // Log any IRC error messages to the console
             Console.WriteLine($"IRC Error: {e.Data.Message}");
+        }
+
+        public static bool IsDigit(char ch)
+        {
+            return ch is >= '0' and <= '9';
+        }
+
+        public static string ConvertToDiscord(string text)
+        {
+            string outText = "";
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                switch (ch)
+                {
+                    case '\x02': // bold
+                        outText += "**";
+                        break;
+                    case '\x1D': // italic
+                        outText += "*";
+                        break;
+                    case '\x1F': // underline
+                        outText += "__";
+                        break;
+                    case '\x1E': // strikethrough
+                        outText += "~~";
+                        break;
+                    case '\x11': // monospace
+                        outText += "```";
+                        break;
+                    case '\x03': // color code
+                        if (!IsDigit(text[i + 1]))
+                        {
+                            break;
+                        }
+                        i++;
+                        if (IsDigit(text[i + 1]))
+                        {
+                            i++;
+                        }
+                        if (text[i + 1] == ',' && IsDigit(text[i + 2]))
+                        {
+                            i += 2;
+                            if (IsDigit(text[i + 1]))
+                            {
+                                i++;
+                            }
+                        }
+                        break;
+                    case '\x04': // hex color code
+                        i += 6;
+                        break;
+                    default:
+                        outText += ch;
+                        break;
+                }
+            }
+
+            return outText;
         }
 
         private async Task SendMessageToDiscordChannel(string discordChannelId, string message)
