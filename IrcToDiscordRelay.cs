@@ -193,14 +193,6 @@ namespace IrcToDiscordRelay
             // Get the IRC channel for the Discord channel, if available
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
-                string messageContent = message.CleanContent;
-
-                // Remove Discriminator from mentioned users
-                foreach (SocketUser mention in message.MentionedUsers)
-                {
-                    messageContent = messageContent.Replace($"#{mention.Discriminator}", "");
-                }
-
                 // Determine if this message is a reply to another message
                 string author = $"<{message.Author}>";
                 if (message.Reference != null)
@@ -222,7 +214,7 @@ namespace IrcToDiscordRelay
                     }
                 }
 
-                await SendMessageToIrcChannel(ircChannel, messageContent, author);
+                await SendMessageToIrcChannel(ircChannel, DiscordToIrcConverter.Convert(message), author);
             }
         }
 
@@ -399,13 +391,26 @@ namespace IrcToDiscordRelay
                     // Remove the @ or : characters from the mention
                     string cleanedMention = mention.Trim('@', ':');
 
-                    // Try to find the user by username
-                    IGuildUser user = guild?.SearchUsersAsync(cleanedMention)?.Result?.FirstOrDefault(u => u.Username == cleanedMention);
-
-                    // Replace the mention with a Discord mention if found, or leave it as is otherwise
-                    if (user != null)
+                    // Replace @everyone and @here with escaped versions
+                    if (cleanedMention.StartsWith("everyone") || cleanedMention.StartsWith("here"))
                     {
-                        message = message.Replace(mention, $"<@{user.Id}>");
+                        message = message.Replace(mention, $"`{mention}`");
+                        continue;
+                    }
+
+                    // Try to find the user by username
+                    var users = guild?.SearchUsersAsync(cleanedMention)?.Result;
+
+                    // Only mention if we only have a single possible match, as we don't want to ping the wrong user
+                    if (users != null && users.Count == 1)
+                    {
+                        IGuildUser user = users.FirstOrDefault(u => u.Username == cleanedMention);
+
+                        // Replace the mention with a Discord mention if found, or leave it as is otherwise
+                        if (user != null)
+                        {
+                            message = message.Replace(mention, $"<@{user.Id}>");
+                        }
                     }
                 }
 

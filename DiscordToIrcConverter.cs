@@ -1,0 +1,42 @@
+﻿using Discord.WebSocket;
+using System.Text.RegularExpressions;
+
+namespace IrcToDiscordRelay
+{
+    internal static class DiscordToIrcConverter
+    {
+        private static readonly Regex BoldRegex = new(@"\*\*(.*?)\*\*");
+        private static readonly Regex ItalicRegex = new(@"\*(.*?)\*");
+        private static readonly Regex UnderlineRegex = new(@"__(.*?)__");
+        private static readonly Regex StrikethroughRegex = new(@"~~(.*?)~~");
+
+        public static string Convert(SocketMessage message)
+        {
+            string messageContent = message.Content;
+
+            // Replace Discord markdown with IRC formatting codes
+            messageContent = BoldRegex.Replace(messageContent, "\x02$1\x02");
+            messageContent = ItalicRegex.Replace(messageContent, "\x1D$1\x1D");
+            messageContent = UnderlineRegex.Replace(messageContent, "\x1F$1\x1F");
+            messageContent = StrikethroughRegex.Replace(messageContent, "\x1E$1\x1E");
+
+            // Parse mentions
+            foreach (SocketUser userMention in message.MentionedUsers)
+            {
+                messageContent = messageContent.Replace($"<@{userMention.Id}>", $"@{userMention.Username}");
+            }
+
+            foreach (SocketRole roleMention in message.MentionedRoles)
+            {
+                messageContent = messageContent.Replace($"<@&{roleMention.Id}>", $"@{roleMention.Name}");
+            }
+
+            foreach (SocketGuildChannel channelMention in message.MentionedChannels)
+            {
+                messageContent = messageContent.Replace($"<#{channelMention.Id}>", $"#{channelMention.Name}");
+            }
+
+            return messageContent;
+        }
+    }
+}
