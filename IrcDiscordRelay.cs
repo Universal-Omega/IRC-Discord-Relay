@@ -12,9 +12,9 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace IrcToDiscordRelay
+namespace IrcDiscordRelay
 {
-    internal class IrcToDiscordRelay
+    internal class IrcDiscordRelay
     {
         private const int MAX_MESSAGE_LENGTH = 400;
 
@@ -38,7 +38,7 @@ namespace IrcToDiscordRelay
         private readonly IrcClient ircClient;
         private readonly DiscordSocketClient discordClient;
 
-        public IrcToDiscordRelay()
+        public IrcDiscordRelay()
         {
             FileIniDataParser parser = new();
             IniData data = parser.ReadFile("config.ini");

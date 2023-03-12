@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace IrcToDiscordRelay
+namespace IrcDiscordRelay
 {
     internal static class IrcToDiscordConverter
     {
