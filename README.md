@@ -1,4 +1,4 @@
-# IrcDiscordRelay
+# IRC-Discord-Relay
 
 A simple bot that relays messages between IRC and Discord.
 It allows users to send messages in one platform and have them appear in the other, making it a great tool for bridging conversations between the two services.
