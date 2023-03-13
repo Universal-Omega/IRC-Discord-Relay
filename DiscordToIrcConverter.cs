@@ -9,6 +9,7 @@ namespace IrcDiscordRelay
         private static readonly Regex ItalicRegex = new(@"\*(.*?)\*");
         private static readonly Regex UnderlineRegex = new(@"__(.*?)__");
         private static readonly Regex StrikethroughRegex = new(@"~~(.*?)~~");
+        private static readonly Regex SlashCommandRegex = new(@"<\/(\w+):?\d*>");
 
         public static string Convert(SocketMessage message)
         {
@@ -35,6 +36,14 @@ namespace IrcDiscordRelay
             {
                 messageContent = messageContent.Replace($"<#{channelMention.Id}>", $"#{channelMention.Name}");
             }
+
+            // Parse slash commands
+            messageContent = SlashCommandRegex.Replace(messageContent, m =>
+            {
+                string tag = m.Value;
+                string commandName = tag.Substring(2, tag.Length - 3).Split(':')[0];
+                return $"/{commandName}";
+            });
 
             return messageContent;
         }
