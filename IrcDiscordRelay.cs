@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace IrcDiscordRelay
@@ -33,7 +34,9 @@ namespace IrcDiscordRelay
         private readonly Dictionary<string, IMessageChannel> discordChannelsMap;
 
         private HashSet<string> ircIgnoredUsers = new();
+        private HashSet<Regex> ircIgnoredUsersRegex;
         private HashSet<string> discordIgnoredUsers = new();
+        private HashSet<Regex> discordIgnoredUsersRegex;
 
         private readonly IrcClient ircClient;
         private readonly DiscordSocketClient discordClient;
@@ -172,12 +175,21 @@ namespace IrcDiscordRelay
                 KeyData ircIgnoreUsers = ignoreUsersSection.Keys.FirstOrDefault(k => k.KeyName == "IRC");
                 if (ircIgnoreUsers != null)
                 {
-                    ircIgnoredUsers = new HashSet<string>(ircIgnoreUsers.Value.Split(','));
+                    ircIgnoredUsers = new HashSet<string>(ircIgnoreUsers.Value.Split(',').Select(val => val.Trim()));
+                    ircIgnoredUsers = new HashSet<string>(ircIgnoredUsers.Where(val => !val.StartsWith("/") || !val.EndsWith("/") ||
+                        !Regex.IsMatch("", val.Trim('/'), RegexOptions.IgnoreCase)));
+                    ircIgnoredUsersRegex = new HashSet<Regex>(ircIgnoredUsers.Where(val => val.StartsWith("/") && val.EndsWith("/"))
+                        .Select(val => new Regex(val.Trim('/'), RegexOptions.IgnoreCase)));
                 }
+
                 KeyData discordIgnoreUsers = ignoreUsersSection.Keys.FirstOrDefault(k => k.KeyName == "Discord");
                 if (discordIgnoreUsers != null)
                 {
-                    discordIgnoredUsers = new HashSet<string>(discordIgnoreUsers.Value.Split(','));
+                    discordIgnoredUsers = new HashSet<string>(discordIgnoreUsers.Value.Split(',').Select(val => val.Trim()));
+                    discordIgnoredUsers = new HashSet<string>(discordIgnoredUsers.Where(val => !val.StartsWith("/") || !val.EndsWith("/") ||
+                        !Regex.IsMatch("", val.Trim('/'), RegexOptions.IgnoreCase)));
+                    discordIgnoredUsersRegex = new HashSet<Regex>(discordIgnoredUsers.Where(val => val.StartsWith("/") && val.EndsWith("/"))
+                        .Select(val => new Regex(val.Trim('/'), RegexOptions.IgnoreCase)));
                 }
             }
         }
@@ -185,7 +197,11 @@ namespace IrcDiscordRelay
         private async Task DiscordClient_MessageReceived(SocketMessage message)
         {
             // Ignore messages from the bot itself and ignored users
-            if (message.Author.Id == discordClient.CurrentUser.Id || discordIgnoredUsers.Contains(message.Author.Username))
+            if (
+                message.Author.Id == discordClient.CurrentUser.Id ||
+                discordIgnoredUsers.Contains(message.Author.Username) ||
+                discordIgnoredUsersRegex.Any(r => r.IsMatch(message.Author.Username))
+            )
             {
                 return;
             }
@@ -301,7 +317,11 @@ namespace IrcDiscordRelay
         private void IrcClient_OnChannelMessage(object sender, IrcEventArgs e)
         {
             // Ignore messages from the bot itself and ignored users
-            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
+            if (
+                e.Data.Nick == ircNickname ||
+                ircIgnoredUsers.Contains(e.Data.Nick) ||
+                ircIgnoredUsersRegex.Any(r => r.IsMatch(e.Data.Nick))
+            )
             {
                 return;
             }
@@ -317,7 +337,11 @@ namespace IrcDiscordRelay
         private void IrcClient_OnChannelNotice(object sender, IrcEventArgs e)
         {
             // Ignore messages from the bot itself and ignored users
-            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
+            if (
+                e.Data.Nick == ircNickname ||
+                ircIgnoredUsers.Contains(e.Data.Nick) ||
+                ircIgnoredUsersRegex.Any(r => r.IsMatch(e.Data.Nick))
+            )
             {
                 return;
             }
@@ -333,7 +357,11 @@ namespace IrcDiscordRelay
         private void IrcClient_OnChannelAction(object sender, ActionEventArgs e)
         {
             // Ignore messages from the bot itself and ignored users
-            if (e.Data.Nick == ircNickname || ircIgnoredUsers.Contains(e.Data.Nick))
+            if (
+                e.Data.Nick == ircNickname ||
+                ircIgnoredUsers.Contains(e.Data.Nick) ||
+                ircIgnoredUsersRegex.Any(r => r.IsMatch(e.Data.Nick))
+            )
             {
                 return;
             }
