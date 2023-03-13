@@ -4,7 +4,7 @@ A simple bot that relays messages between IRC and Discord.
 It allows users to send messages in one platform and have them appear in the other, making it a great tool for bridging conversations between the two services.
 The bot supports message splitting for long messages, as well as parsing mentions and replies.
 It can be configured to join multiple IRC channels and map them to specific Discord channels, and can also ignore messages from certain users on both platforms.
-It also supports converting from IRC formatting to Discord markdown.
+It also supports converting from IRC formatting to Discord markdown and vice-versa.
 
 ### Configuration
 
@@ -31,8 +31,8 @@ Each key in this section should be a Discord channel ID, and the corresponding v
 123456789 = #irc-channel
 
 [IgnoreUsers]
-IRC = a comma-separated list of IRC nicknames to ignore messages from
-Discord = a comma-separated list of Discord usernames to ignore messages from
+IRC = a comma-separated list of IRC nicknames to ignore messages from; supports regex
+Discord = a comma-separated list of Discord usernames to ignore messages from; supports regex
 ```
 
 Note: Any options not specified in the configuration file will use their default values.
