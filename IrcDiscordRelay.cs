@@ -268,6 +268,11 @@ namespace IrcDiscordRelay
             string[] lines = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             foreach (string line in lines)
             {
+                if (line.Length == 0 || line.Trim().Length == 0)
+                {
+                    continue;
+                }
+
                 if (line.Length <= chunkSize)
                 {
                     parts.Add(line);
