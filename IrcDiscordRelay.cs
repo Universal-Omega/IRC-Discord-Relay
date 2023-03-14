@@ -422,15 +422,15 @@ namespace IrcDiscordRelay
                 // Parse mentions to Discord mentions
                 foreach (string mention in mentions)
                 {
-                    // Remove the @ or : characters from the mention
-                    string cleanedMention = mention.Trim('@', ':');
-
                     // Replace @everyone and @here with escaped versions
-                    if (cleanedMention.StartsWith("everyone") || cleanedMention.StartsWith("here"))
+                    if (mention.StartsWith("@everyone") || mention.StartsWith("@here"))
                     {
                         message = message.Replace(mention, $"`{mention}`");
                         continue;
                     }
+
+                    // Remove the @ or : characters from the mention
+                    string cleanedMention = mention.Trim('@', ':');
 
                     // Try to find the user by username
                     IReadOnlyCollection<IGuildUser> users = guild?.SearchUsersAsync(cleanedMention)?.Result;
