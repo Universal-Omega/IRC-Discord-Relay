@@ -33,9 +33,9 @@ namespace IrcDiscordRelay
         private readonly Dictionary<string, ulong> ircToDiscordChannelMap;
         private readonly Dictionary<string, IMessageChannel> discordChannelsMap;
 
-        private HashSet<string> ircIgnoredUsers = new();
+        private HashSet<string> ircIgnoredUsers;
         private HashSet<Regex> ircIgnoredUsersRegex;
-        private HashSet<string> discordIgnoredUsers = new();
+        private HashSet<string> discordIgnoredUsers;
         private HashSet<Regex> discordIgnoredUsersRegex;
 
         private readonly IrcClient ircClient;
@@ -160,6 +160,7 @@ namespace IrcDiscordRelay
             ircClient.Disconnect();
             ircClient.OnChannelMessage -= IrcClient_OnChannelMessage;
             ircClient.OnChannelNotice -= IrcClient_OnChannelNotice;
+            ircClient.OnChannelAction -= IrcClient_OnChannelAction;
             ircClient.OnError -= IrcClient_OnError;
 
             // Disconnect from the Discord bot
