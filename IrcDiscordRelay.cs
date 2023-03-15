@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -28,6 +29,7 @@ namespace IrcDiscordRelay
         private readonly bool ircUseSSL;
         private readonly string discordBotToken;
         private readonly string discordProxy;
+        private readonly bool discordIncludeEdited;
 
         private readonly Dictionary<ulong, string> discordToIrcChannelMap;
         private readonly Dictionary<string, ulong> ircToDiscordChannelMap;
@@ -55,6 +57,7 @@ namespace IrcDiscordRelay
             ircUseSSL = bool.Parse(data["IRC"]["UseSSL"]);
             discordBotToken = data["Discord"]["BotToken"];
             discordProxy = data["Discord"]["Proxy"];
+            discordIncludeEdited = bool.Parse(data["Discord"]["IncludeEdited"] ?? "false");
 
             discordToIrcChannelMap = new Dictionary<ulong, string>();
             ircToDiscordChannelMap = new Dictionary<string, ulong>();
@@ -78,7 +81,7 @@ namespace IrcDiscordRelay
             // Create the IRC client and register event handlers
             ircClient = new IrcClient
             {
-                Encoding = System.Text.Encoding.UTF8,
+                Encoding = Encoding.UTF8,
                 AutoReconnect = true,
                 AutoRejoin = true,
 
@@ -109,6 +112,11 @@ namespace IrcDiscordRelay
             );
 
             discordClient.MessageReceived += DiscordClient_MessageReceived;
+
+            if (discordIncludeEdited)
+            {
+                discordClient.MessageUpdated += DiscordClient_MessageUpdated;
+            }
         }
 
         public async Task Start()
@@ -230,6 +238,48 @@ namespace IrcDiscordRelay
                         author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
                     }
                 }
+
+                await SendMessageToIrcChannel(ircChannel, DiscordToIrcConverter.Convert(message), author);
+            }
+        }
+
+        private async Task DiscordClient_MessageUpdated(Cacheable<IMessage, ulong> cacheable, SocketMessage message, ISocketMessageChannel channel)
+        {
+            // Ignore messages from the bot itself and ignored users
+            if (
+                message.Author.Id == discordClient.CurrentUser.Id ||
+                discordIgnoredUsers.Contains(message.Author.Username) ||
+                discordIgnoredUsersRegex.Any(r => r.IsMatch(message.Author.Username))
+            )
+            {
+                return;
+            }
+
+            // Get the IRC channel for the Discord channel, if available
+            if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
+            {
+                // Determine if this message is a reply to another message
+                string author = $"<{message.Author}>";
+                if (message.Reference != null)
+                {
+                    IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
+
+                    // If replying to the bot, return the actual user that the reply is for
+                    if (repliedToMessage.Author.Id == discordClient.CurrentUser.Id)
+                    {
+                        string[] parts = repliedToMessage.Content.Split(' ');
+                        if (parts.Length > 1 && parts[0].StartsWith("<") && parts[0].EndsWith(">"))
+                        {
+                            author = $"<{message.Author}, replying to {parts[0][1..^1]}>";
+                        }
+                    }
+                    else
+                    {
+                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
+                    }
+                }
+
+                author += " (edited)";
 
                 await SendMessageToIrcChannel(ircChannel, DiscordToIrcConverter.Convert(message), author);
             }
