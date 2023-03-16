@@ -105,6 +105,7 @@ namespace IrcDiscordRelay
             discordClient = new DiscordSocketClient(
                 new DiscordSocketConfig
                 {
+                    FormatUsersInBidirectionalUnicode = False,  // This formatting is not supported by IRC
                     GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent,
                     RestClientProvider = DefaultRestClientProvider.Create(useProxy: discordProxy != null),
                     WebSocketProvider = DefaultWebSocketProvider.Create(discordProxy != null ? HttpClient.DefaultProxy : null)
