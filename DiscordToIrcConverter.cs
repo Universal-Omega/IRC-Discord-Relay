@@ -6,7 +6,7 @@ namespace IrcDiscordRelay
     internal static class DiscordToIrcConverter
     {
         private static readonly Regex BoldRegex = new(@"\*\*(.*?)\*\*");
-        private static readonly Regex ItalicRegex = new(@"\*(.*?)\*");
+        private static readonly Regex ItalicRegex = new(@"(\*(.*?)\*)|(_(.*?)_)");
         private static readonly Regex UnderlineRegex = new(@"__(.*?)__");
         private static readonly Regex StrikethroughRegex = new(@"~~(.*?)~~");
         private static readonly Regex SlashCommandRegex = new(@"<\/(\w+):?\d*>");
