@@ -25,6 +25,7 @@ UseSSL = whether to use SSL for the IRC connection (true or false)
 [Discord]
 BotToken = the Discord bot token to use for the bot account
 Proxy = the HTTP proxy to use for the Discord connection (if required)
+IncludeEdited = whether to include edited messages, prefixed with "(edited)" after the author, in the relay feeds (true or false, if required)
 
 [ChannelMapping]
 Each key in this section should be a Discord channel ID, and the corresponding value should be the name of the IRC channel to relay messages to. For example:
