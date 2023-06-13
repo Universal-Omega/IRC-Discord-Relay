@@ -220,7 +220,15 @@ namespace IrcDiscordRelay
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
                 // Determine if this message is a reply to another message
-                string author = $"<{message.Author}>";
+                // Don't include the tag if it is 0000 (user has switched to the new username system
+                string author;
+                if (message.Author.Discriminator == "0000") {
+                    author = $"<{message.Author.Username}>";
+                }
+                else
+                {
+                    author = $"<{message.Author}>";
+                }
                 if (message.Reference != null)
                 {
                     IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
@@ -236,7 +244,14 @@ namespace IrcDiscordRelay
                     }
                     else
                     {
-                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
+                        // Don't include the tag if it is 0000 (user has switched to the new username system
+                        if (message.Author.Discriminator == "0000") {
+                            author = $"<{message.Author}, replying to {repliedToMessage.Author.Username}>";
+                        }
+                        else
+                        {
+                            author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
+                        }
                     }
                 }
 
