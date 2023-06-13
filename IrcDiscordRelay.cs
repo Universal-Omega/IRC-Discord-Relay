@@ -245,7 +245,7 @@ namespace IrcDiscordRelay
                     else
                     {
                         // Don't include the tag if it is 0000 (user has switched to the new username system
-                        if (message.Author.Discriminator == "0000") {
+                        if (repliedToMessage.Author.Discriminator == "0000") {
                             author = $"<{message.Author}, replying to {repliedToMessage.Author.Username}>";
                         }
                         else
