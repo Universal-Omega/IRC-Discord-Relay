@@ -1,4 +1,5 @@
 ﻿using Discord.WebSocket;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace IrcDiscordRelay
