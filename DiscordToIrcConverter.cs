@@ -37,6 +37,13 @@ namespace IrcDiscordRelay
                 messageContent = messageContent.Replace($"<#{channelMention.Id}>", $"#{channelMention.Name}");
             }
 
+            // Support attachments
+            if (message.Attachments.Any())
+            {
+                IEnumerable<string> attachments = message.Attachments.Select(x => x.Url);
+                messageContent += "\n" + string.Join("\n", attachments);
+            }
+
             // Parse slash commands
             messageContent = SlashCommandRegex.Replace(messageContent, m =>
             {
