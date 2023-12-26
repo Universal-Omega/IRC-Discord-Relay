@@ -486,8 +486,8 @@ namespace IrcDiscordRelay
                     // Try to find the user by username
                     IReadOnlyCollection<IGuildUser> users = guild?.SearchUsersAsync(cleanedMention)?.Result;
 
-                    // Only mention if we only have a single possible match, as we don't want to ping the wrong user
-                    if (users != null && users.Count == 1)
+                    // Check if there is at least one matching user
+                    if (users != null && users.Count >= 1)
                     {
                         IGuildUser user = users.FirstOrDefault(u => u.Username == cleanedMention);
 
