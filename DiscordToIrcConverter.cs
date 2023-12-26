@@ -1,4 +1,6 @@
 ﻿using Discord.WebSocket;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace IrcDiscordRelay
@@ -35,6 +37,13 @@ namespace IrcDiscordRelay
             foreach (SocketGuildChannel channelMention in message.MentionedChannels)
             {
                 messageContent = messageContent.Replace($"<#{channelMention.Id}>", $"#{channelMention.Name}");
+            }
+
+            // Support attachments
+            if (message.Attachments.Any())
+            {
+                IEnumerable<string> attachments = message.Attachments.Select(x => x.Url);
+                messageContent += "\n" + string.Join("\n", attachments);
             }
 
             // Parse slash commands
