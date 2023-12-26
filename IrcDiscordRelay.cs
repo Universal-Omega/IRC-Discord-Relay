@@ -220,7 +220,7 @@ namespace IrcDiscordRelay
             if (discordToIrcChannelMap.TryGetValue(message.Channel.Id, out string ircChannel))
             {
                 // Determine if this message is a reply to another message
-                string author = $"<{message.Author.Username}>";
+                string author = $"<{message.Author}>";
                 if (message.Reference != null)
                 {
                     IMessage repliedToMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
@@ -231,12 +231,12 @@ namespace IrcDiscordRelay
                         string[] parts = repliedToMessage.Content.Split(' ');
                         if (parts.Length > 1 && parts[0].StartsWith("<") && parts[0].EndsWith(">"))
                         {
-                            author = $"<{message.Author.Username}, replying to {parts[0][1..^1]}>";
+                            author = $"<{message.Author}, replying to {parts[0][1..^1]}>";
                         }
                     }
                     else
                     {
-                        author = $"<{message.Author.Username}, replying to {repliedToMessage.Author.Username}>";
+                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
                     }
                 }
 
@@ -271,12 +271,12 @@ namespace IrcDiscordRelay
                         string[] parts = repliedToMessage.Content.Split(' ');
                         if (parts.Length > 1 && parts[0].StartsWith("<") && parts[0].EndsWith(">"))
                         {
-                            author = $"<{message.Author.Username}, replying to {parts[0][1..^1]}>";
+                            author = $"<{message.Author}, replying to {parts[0][1..^1]}>";
                         }
                     }
                     else
                     {
-                        author = $"<{message.Author.Username}, replying to {repliedToMessage.Author.Username}>";
+                        author = $"<{message.Author}, replying to {repliedToMessage.Author}>";
                     }
                 }
 
