@@ -9,6 +9,7 @@ namespace IrcDiscordRelay
     {
         private static readonly Regex BoldRegex = new(@"\*\*(.*?)\*\*");
         private static readonly Regex ItalicRegex = new(@"\*(.*?)\*");
+        private static readonly Regex ItalicRegex2 = new(@"_(.*?)_");
         private static readonly Regex UnderlineRegex = new(@"__(.*?)__");
         private static readonly Regex StrikethroughRegex = new(@"~~(.*?)~~");
         private static readonly Regex SlashCommandRegex = new(@"<\/(\w+):?\d*>");
@@ -22,6 +23,16 @@ namespace IrcDiscordRelay
             messageContent = ItalicRegex.Replace(messageContent, "\x1D$1\x1D");
             messageContent = UnderlineRegex.Replace(messageContent, "\x1F$1\x1F");
             messageContent = StrikethroughRegex.Replace(messageContent, "\x1E$1\x1E");
+
+            messageContent = ItalicRegex2.Replace(messageContent, m =>
+            {
+                if (IsWithinUrl(messageContent, m.Index, m.Length))
+                {
+                    return m.Value; // Return the original value if within URL
+                }
+
+                return m.Value[0] + "\x1D" + m.Groups[1].Value + "\x1D" + m.Value[^1];
+            });
 
             // Parse mentions
             foreach (SocketUser userMention in message.MentionedUsers)
@@ -55,6 +66,19 @@ namespace IrcDiscordRelay
             });
 
             return messageContent;
+        }
+
+        private static bool IsWithinUrl(string message, int index, int length)
+        {
+            // Common URL delimiters
+            char[] delimiters = { ' ', '\t', '<', '>', '(', ')', '[', ']', '{', '}', '\"', '\'' };
+
+            // Check if the matched portion is within a URL
+            int start = Math.Max(0, index - 1);
+            int end = Math.Min(index + length, message.Length);
+
+            return start > 0 && end < message.Length &&
+                delimiters.Contains(message[start]) && delimiters.Contains(message[end - 1]);
         }
     }
 }
