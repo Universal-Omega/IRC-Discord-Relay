@@ -24,6 +24,7 @@ namespace IrcDiscordRelay
             messageContent = UnderlineRegex.Replace(messageContent, "\x1F$1\x1F");
             messageContent = StrikethroughRegex.Replace(messageContent, "\x1E$1\x1E");
 
+            // Parse <:emoji:0123456789> to :emoji:
             messageContent = EmojiRegex.Replace(messageContent, "$1");
 
             // Parse mentions
