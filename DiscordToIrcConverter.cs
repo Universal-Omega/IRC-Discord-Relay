@@ -13,6 +13,7 @@ namespace IrcDiscordRelay
         private static readonly Regex UnderlineRegex = new(@"__(.*?)__");
         private static readonly Regex StrikethroughRegex = new(@"~~(.*?)~~");
         private static readonly Regex SlashCommandRegex = new(@"<\/(\w+):?\d*>");
+        private static readonly Regex EmojiRegex = new(@"<([A-Za-z0-9-_]?:[A-Za-z0-9-_]+:)[0-9]+>");
 
         public static string Convert(SocketMessage message)
         {
@@ -23,6 +24,9 @@ namespace IrcDiscordRelay
             messageContent = ItalicRegex.Replace(messageContent, "\x1D$1\x1D");
             messageContent = UnderlineRegex.Replace(messageContent, "\x1F$1\x1F");
             messageContent = StrikethroughRegex.Replace(messageContent, "\x1E$1\x1E");
+
+            // Parse <:emoji:0123456789> to :emoji:
+            messageContent = EmojiRegex.Replace(messageContent, "$1");
 
             messageContent = ItalicRegex2.Replace(messageContent, m =>
             {
