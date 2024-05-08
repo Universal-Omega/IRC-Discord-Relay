@@ -461,7 +461,7 @@ namespace IrcDiscordRelay
         {
             _ = await Task.Run(() =>
             {
-                List<string> mentions = message.Split(' ').Where(s => s.StartsWith('@') || s.EndsWith(':')).ToList();
+                List<string> mentions = message.Split(' ').Where(s => s.StartsWith('@') || s.EndsWith(':') || s.EndsWith(',')).ToList();
                 if (!mentions.Any())
                 {
                     return message;
@@ -473,15 +473,18 @@ namespace IrcDiscordRelay
                 // Parse mentions to Discord mentions
                 foreach (string mention in mentions)
                 {
+                    // Convert to lower case for case-insensitive comparison
+                    string mentionLower = mention.ToLowerInvariant();
+
                     // Replace @everyone and @here with escaped versions
-                    if (mention.StartsWith("@everyone") || mention.StartsWith("@here"))
+                    if (mentionLower.StartsWith("@everyone") || mentionLower.StartsWith("@here"))
                     {
                         message = message.Replace(mention, $"`{mention}`");
                         continue;
                     }
 
-                    // Remove the @ or : characters from the mention
-                    string cleanedMention = mention.Trim('@', ':');
+                    // Remove the @, :, or , characters from the mention
+                    string cleanedMention = mentionLower.Trim('@', ':', ',');
 
                     // Try to find the user by username
                     IReadOnlyCollection<IGuildUser> users = guild?.SearchUsersAsync(cleanedMention)?.Result;
@@ -489,7 +492,7 @@ namespace IrcDiscordRelay
                     // Check if there is at least one matching user
                     if (users != null && users.Count >= 1)
                     {
-                        IGuildUser user = users.FirstOrDefault(u => u.Username == cleanedMention);
+                        IGuildUser user = users.FirstOrDefault(u => u.Username.ToLowerInvariant() == cleanedMention);
 
                         // Replace the mention with a Discord mention if found, or leave it as is otherwise
                         if (user != null)
