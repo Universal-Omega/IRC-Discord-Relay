@@ -461,7 +461,7 @@ namespace IrcDiscordRelay
         {
             _ = await Task.Run(() =>
             {
-                List<string> mentions = message.Split(' ').Where(s => s.StartsWith('@') || s.EndsWith(':') || s.EndsWith(',')).ToList();
+                List<string> mentions = message.Split(' ').Where(s => s.StartsWith('@') || s.EndsWith(':')).ToList();
                 if (!mentions.Any())
                 {
                     return message;
