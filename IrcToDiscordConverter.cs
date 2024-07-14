@@ -7,7 +7,9 @@ namespace IrcDiscordRelay
     internal static class IrcToDiscordConverter
     {
         private const char CharBold = '\x02';
+        private const char CharMonospace = '\x11';
         private const char CharItalics = '\x1D';
+        private const char CharStrikethrough = '\x1E';
         private const char CharUnderline = '\x1F';
         private const char CharColor = '\x03';
         private const char CharReverseColor = '\x16';
@@ -35,7 +37,9 @@ namespace IrcDiscordRelay
                 switch (ch)
                 {
                     case CharBold:
+                    case CharMonospace:
                     case CharItalics:
+                    case CharStrikethrough:
                     case CharUnderline:
                         current.SetField(ch, !prev.GetField(ch));
                         break;
@@ -122,6 +126,14 @@ namespace IrcDiscordRelay
                 {
                     mdText += "__";
                 }
+                if (!prevBlock.Strikethrough && block.Strikethrough)
+                {
+                    mdText += "~~";
+                }
+                if (!prevBlock.Monospace && block.Monospace)
+                {
+                    mdText += "`";
+                }
 
                 // NOTE: non-standard discord spoilers
                 if (!prevSpoiler && spoiler)
@@ -131,6 +143,14 @@ namespace IrcDiscordRelay
 
                 // Add end markers when style turns from true to false
                 // (and apply in reverse order to maintain nesting)
+                if (prevBlock.Monospace && !block.Monospace)
+                {
+                    mdText += "`";
+                }
+                if (prevBlock.Strikethrough && !block.Strikethrough)
+                {
+                    mdText += "~~";
+                }
                 if (prevBlock.Underline && !block.Underline)
                 {
                     mdText += "__";
@@ -202,13 +222,17 @@ namespace IrcDiscordRelay
     public struct Block
     {
         private const char CharBold = '\x02';
+        private const char CharMonospace = '\x11';
         private const char CharItalics = '\x1D';
+        private const char CharStrikethrough = '\x1E';
         private const char CharUnderline = '\x1F';
 
         public static readonly Block Empty = new("");
         public string Text;
         public bool Bold;
+        public bool Monospace;
         public bool Italic;
+        public bool Strikethrough;
         public bool Underline;
         public bool Reverse;
         public int Foreground;
@@ -218,7 +242,9 @@ namespace IrcDiscordRelay
         {
             Text = text;
             Bold = false;
+            Monospace = false;
             Italic = false;
+            Strikethrough = false;
             Underline = false;
             Reverse = false;
             Foreground = -1;
@@ -232,8 +258,14 @@ namespace IrcDiscordRelay
                 case CharBold:
                     Bold = value;
                     break;
+                case CharMonospace:
+                    Monospace = value;
+                    break;
                 case CharItalics:
                     Italic = value;
+                    break;
+                case CharStrikethrough:
+                    Strikethrough = value;
                     break;
                 case CharUnderline:
                     Underline = value;
@@ -246,7 +278,9 @@ namespace IrcDiscordRelay
             return key switch
             {
                 CharBold => Bold,
+                CharMonospace => Monospace,
                 CharItalics => Italic,
+                CharStrikethrough => Strikethrough,
                 CharUnderline => Underline,
                 _ => false,
             };
